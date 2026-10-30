@@ -578,7 +578,12 @@ function M.open_list(tabpage)
     return
   end
   local buf = vim.api.nvim_create_buf(false, true)
-  vim.bo[buf].buftype = "nofile"
+  -- acwrite, not nofile: Neovim only routes :w to BufWriteCmd for buffers
+  -- it considers writable, and nofile ones fail with E382 instead.
+  vim.bo[buf].buftype = "acwrite"
+  -- A name is required too: unnamed acwrite buffers fail :w with E32.
+  M._list_seq = (M._list_seq or 0) + 1
+  pcall(vim.api.nvim_buf_set_name, buf, string.format("codediff-review://%d", M._list_seq))
   vim.bo[buf].bufhidden = "wipe"
   vim.bo[buf].swapfile = false
   vim.bo[buf].filetype = "codediff-review"
