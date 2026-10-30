@@ -217,10 +217,18 @@ function M.setup_all_keymaps(tabpage, original_bufnr, modified_bufnr, is_explore
       review.export_comments(ctx)
     end, { desc = "Copy review comments to clipboard" })
   end
+  -- clear/pop share the <leader>cd prefix, so neither can be nowait:
+  -- Neovim must wait out the longer <leader>cdp sequence.
+  local prefix_opts = { desc = "Clear review comments", nowait = false }
   if keymaps.clear_comments then
     lifecycle.set_tab_keymap(tabpage, "n", keymaps.clear_comments, function()
       review.clear_comments(ctx)
-    end, { desc = "Clear review comments" })
+    end, prefix_opts)
+  end
+  if keymaps.pop_comment then
+    lifecycle.set_tab_keymap(tabpage, "n", keymaps.pop_comment, function()
+      review.pop_comment(ctx)
+    end, { desc = "Remove last review comment", nowait = false })
   end
 
   if keymaps.align_move and not is_inline and config.options.diff.compute_moves then

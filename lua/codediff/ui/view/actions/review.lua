@@ -12,23 +12,36 @@ local M = {}
 
 local lifecycle = require("codediff.ui.lifecycle")
 
---- Human label for a stored revision. Keeps the raw value for hashes so the
---- export stays resolvable, but spells out the symbolic ones.
+--- Short label for the frozen revision a comment is pinned to. Worktree (nil
+--- or "WORKING") maps to "" -- callers render that as a (+worktree) marker
+--- against the base instead. Hashes shorten to 7 chars, git-style.
 --- @param rev string|nil
 --- @return string
-function M.rev_label(rev)
+function M.base_label(rev)
   if rev == nil or rev == "WORKING" then
-    return "WORKING"
+    return ""
   elseif rev == ":0" then
-    return ":0-staged"
+    return "staged"
   elseif rev == ":1" then
-    return ":1-base"
+    return "base"
   elseif rev == ":2" then
-    return ":2-ours"
+    return "ours"
   elseif rev == ":3" then
-    return ":3-theirs"
+    return "theirs"
+  elseif type(rev) == "string" and rev:match("^%x+$") and #rev > 7 then
+    return rev:sub(1, 7)
   end
   return rev
+end
+
+--- Repo display name: basename of the git root, "" when not in a repo.
+--- @param git_root string
+--- @return string
+function M.repo_name(git_root)
+  if git_root == nil or git_root == "" then
+    return ""
+  end
+  return vim.fn.fnamemodify(git_root, ":t")
 end
 
 --- Compiler-style location prefix: `file:start-end` or `file:start`.
@@ -42,24 +55,40 @@ function M.location(comment)
   return string.format("%s:%d-%d", file, comment.start_line, comment.end_line)
 end
 
---- Render one comment as text. First line carries the location plus enough
---- revision context to find the file again; following lines quote the code.
+--- Render one comment as text: `repo@base:path:lines (+worktree): body`.
+--- The base always pins a frozen revision (full context for `git show
+--- <base> -- <path>`); a (+worktree) marker means the lines were read from
+--- the dirty worktree on top of that base. Frozen-side comments carry no
+--- marker -- `repo@base:path:lines` alone is exact. Snippet lines follow,
+--- quoted with their line numbers.
 --- @param comment table
 --- @return string
 function M.format_comment(comment)
-  local header = string.format(
-    "%s [side=%s rev=%s other=%s%s]: %s",
-    M.location(comment),
-    comment.side,
-    M.rev_label(comment.side_revision),
-    M.rev_label(comment.other_revision),
-    comment.git_root ~= "" and (" repo=" .. comment.git_root) or "",
-    comment.body
-  )
-  if not comment.snippet or #comment.snippet == 0 then
-    return header
+  local loc = M.location(comment)
+  local repo = M.repo_name(comment.git_root)
+  local is_worktree = comment.side_revision == nil or comment.side_revision == "WORKING"
+  local head
+  if is_worktree then
+    local base = M.base_label(comment.other_revision)
+    if repo ~= "" and base ~= "" then
+      head = string.format("%s@%s:%s (+worktree): %s", repo, base, loc, comment.body)
+    elseif repo ~= "" then
+      head = string.format("%s:%s (+worktree): %s", repo, loc, comment.body)
+    else
+      head = string.format("%s (+worktree): %s", loc, comment.body)
+    end
+  else
+    local base = M.base_label(comment.side_revision)
+    if repo ~= "" then
+      head = string.format("%s@%s:%s: %s", repo, base, loc, comment.body)
+    else
+      head = string.format("%s@%s: %s", loc, base, comment.body)
+    end
   end
-  local parts = { header }
+  if not comment.snippet or #comment.snippet == 0 then
+    return head
+  end
+  local parts = { head }
   for i, line in ipairs(comment.snippet) do
     table.insert(parts, string.format("  %d | %s", comment.start_line + i - 1, line))
   end
@@ -98,6 +127,25 @@ function M.clear_comments(ctx_or_tab)
   end
   session.review_comments = {}
   vim.notify("Cleared review comments", vim.log.levels.INFO)
+end
+
+--- Pop the most recently added comment for a session (LIFO undo).
+--- @param ctx_or_tab any CodeDiffActionContext or tabpage number
+--- @return table|nil removed comment
+function M.pop_comment(ctx_or_tab)
+  local tabpage = type(ctx_or_tab) == "number" and ctx_or_tab or ctx_or_tab.tabpage
+  local session = lifecycle.get_session(tabpage)
+  local comments = (session and session.review_comments) or {}
+  if #comments == 0 then
+    vim.notify("[codediff] No review comments to remove", vim.log.levels.INFO)
+    return nil
+  end
+  local removed = table.remove(comments)
+  vim.notify(
+    string.format("Removed comment %d (%s)", removed.id or #comments + 1, M.location(removed)),
+    vim.log.levels.INFO
+  )
+  return removed
 end
 
 -- Resolve which side the cursor/selection is on.
