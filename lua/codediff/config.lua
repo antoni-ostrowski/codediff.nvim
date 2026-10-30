@@ -127,6 +127,9 @@ M.defaults = {
       toggle_layout = "t", -- Toggle diff layout for the current codediff session
       toggle_compact = "gc", -- Toggle compact mode (fold unchanged regions, show only hunks + context)
       show_help = "g?", -- Show floating window with available keymaps
+      add_comment = "<leader>cc", -- Add review comment for selection (visual) or line (normal)
+      export_comments = "<leader>ce", -- Copy all review comments to clipboard
+      clear_comments = "<leader>cd", -- Discard all review comments for this view
     },
     explorer = {
       select = "<CR>",

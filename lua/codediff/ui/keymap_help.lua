@@ -79,6 +79,9 @@ local function build_sections(keymaps, is_bound, shape)
       { km.align_move, "Align moved code block" },
       { km.toggle_compact, "Toggle compact mode (fold unchanged)" },
       { km.hunk_textobject, "Hunk textobject (visual/operator)" },
+      { km.add_comment, "Add review comment (line/selection)" },
+      { km.export_comments, "Copy review comments to clipboard" },
+      { km.clear_comments, "Clear review comments" },
       { km.show_help, "Toggle this help" },
     }, is_bound)
   )

@@ -13,6 +13,7 @@ local navigation = require("codediff.ui.view.navigation")
 local compact = require("codediff.ui.view.compact")
 
 local hunk = require("codediff.ui.view.actions.hunk")
+local review = require("codediff.ui.view.actions.review")
 local diffget = require("codediff.ui.view.actions.diffget")
 local panes = require("codediff.ui.view.actions.panes")
 local stage = require("codediff.ui.view.actions.stage")
@@ -198,6 +199,28 @@ function M.setup_all_keymaps(tabpage, original_bufnr, modified_bufnr, is_explore
         hunk.select_hunk(ctx)
       end, vim.tbl_extend("force", hunk_opts, { desc = "Hunk textobject" }))
     end
+
+    -- Review comment (normal = cursor line, visual = selection)
+    if keymaps.add_comment then
+      lifecycle.set_buf_keymap(tabpage, bufnr, "n", keymaps.add_comment, function()
+        review.add_comment(ctx, false)
+      end, vim.tbl_extend("force", hunk_opts, { desc = "Add review comment" }))
+      lifecycle.set_buf_keymap(tabpage, bufnr, "x", keymaps.add_comment, function()
+        review.add_comment(ctx, true)
+      end, vim.tbl_extend("force", hunk_opts, { desc = "Add review comment for selection" }))
+    end
+  end
+
+  -- Review export/clear - session-wide, so tab-local (available from any pane)
+  if keymaps.export_comments then
+    lifecycle.set_tab_keymap(tabpage, "n", keymaps.export_comments, function()
+      review.export_comments(ctx)
+    end, { desc = "Copy review comments to clipboard" })
+  end
+  if keymaps.clear_comments then
+    lifecycle.set_tab_keymap(tabpage, "n", keymaps.clear_comments, function()
+      review.clear_comments(ctx)
+    end, { desc = "Clear review comments" })
   end
 
   if keymaps.align_move and not is_inline and config.options.diff.compute_moves then
