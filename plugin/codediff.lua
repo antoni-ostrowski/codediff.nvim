@@ -34,3 +34,9 @@ end, {
   end,
   desc = "Live code review workspace for Neovim",
 })
+
+vim.api.nvim_create_user_command("CodeDiffComments", function()
+  require("codediff.ui.view.actions.review").open_list_current()
+end, {
+  desc = "List and edit review comments for this diff view",
+})
