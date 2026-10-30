@@ -82,7 +82,7 @@ local function build_sections(keymaps, is_bound, shape)
       { km.add_comment, "Add review comment (line/selection)" },
       { km.export_comments, "Copy review comments to clipboard" },
       { km.clear_comments, "Clear review comments" },
-      { km.pop_comment, "Remove last review comment" },
+      { km.list_comments, "List/edit review comments" },
       { km.show_help, "Toggle this help" },
     }, is_bound)
   )

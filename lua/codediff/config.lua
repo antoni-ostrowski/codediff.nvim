@@ -130,7 +130,7 @@ M.defaults = {
       add_comment = "<leader>cc", -- Add review comment for selection (visual) or line (normal)
       export_comments = "<leader>ce", -- Copy all review comments to clipboard
       clear_comments = "<leader>cd", -- Discard all review comments for this view
-      pop_comment = "<leader>cdp", -- Remove the most recently added review comment
+      list_comments = "<leader>cl", -- Open the editable review-comments list
     },
     explorer = {
       select = "<CR>",

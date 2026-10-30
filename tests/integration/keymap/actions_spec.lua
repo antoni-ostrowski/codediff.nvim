@@ -84,6 +84,10 @@ local EXPECT = {
     toggle_stage = { "explorer" },
     toggle_staged_view = { "explorer" },
     align_move = { "moves" },
+    add_comment = { "standalone", "inline", "explorer", "history", "conflict" },
+    export_comments = { "standalone", "inline", "explorer", "history", "conflict" },
+    clear_comments = { "standalone", "inline", "explorer", "history", "conflict" },
+    list_comments = { "standalone", "inline", "explorer", "history", "conflict" },
   },
   explorer = {
     select = { "explorer" },
@@ -157,6 +161,14 @@ local function run_audit()
       checked = checked + 1
       if not reachable(tp, ih, TEXTOBJ) then
         table.insert(failures, string.format("%-10s %-33s %-14s NOT REACHABLE (o/x)", shape, "view.hunk_textobject", ih))
+      end
+    end
+    -- review comments are added from visual selections as well as the cursor line
+    local add = config.options.keymaps.view.add_comment
+    if type(add) == "string" then
+      checked = checked + 1
+      if not reachable(tp, add, { "x" }) then
+        table.insert(failures, string.format("%-10s %-33s %-14s NOT REACHABLE (x)", shape, "view.add_comment", add))
       end
     end
     -- panel double click

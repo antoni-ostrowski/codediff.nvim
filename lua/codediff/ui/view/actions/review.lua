@@ -129,23 +129,116 @@ function M.clear_comments(ctx_or_tab)
   vim.notify("Cleared review comments", vim.log.levels.INFO)
 end
 
---- Pop the most recently added comment for a session (LIFO undo).
---- @param ctx_or_tab any CodeDiffActionContext or tabpage number
---- @return table|nil removed comment
-function M.pop_comment(ctx_or_tab)
-  local tabpage = type(ctx_or_tab) == "number" and ctx_or_tab or ctx_or_tab.tabpage
-  local session = lifecycle.get_session(tabpage)
-  local comments = (session and session.review_comments) or {}
-  if #comments == 0 then
-    vim.notify("[codediff] No review comments to remove", vim.log.levels.INFO)
+--- Parse an export header line back into fields.
+--- Accepts `repo@base:file:lines (+worktree): body` and the bare
+--- `file:lines (+worktree): body` form used outside a repo.
+--- NOTE: Lua patterns cannot quantify a group, so the marked/unmarked
+--- shapes are separate patterns rather than one with an optional group.
+--- @param line string
+--- @return table|nil { repo, base, file, start_line, end_line, worktree, body }
+function M.parse_header(line)
+  if type(line) ~= "string" then
     return nil
   end
-  local removed = table.remove(comments)
-  vim.notify(
-    string.format("Removed comment %d (%s)", removed.id or #comments + 1, M.location(removed)),
-    vim.log.levels.INFO
-  )
-  return removed
+  local REPO_MARKED = "^(.-)@([^:]-):(.-):(%d+)(%-?%d*)%s*%(%+[^)]*%)%s*:%s*(.*)$"
+  local REPO_PLAIN = "^(.-)@([^:]-):(.-):(%d+)(%-?%d*)%s*:%s*(.*)$"
+  local BARE_MARKED = "^(.-):(%d+)(%-?%d*)%s*%(%+[^)]*%)%s*:%s*(.*)$"
+  local BARE_PLAIN = "^(.-):(%d+)(%-?%d*)%s*:%s*(.*)$"
+  local function finish(repo, base, file, s, e, worktree, body)
+    -- The leading dash of `e` is a range separator (`13-16`), not a sign.
+    if type(e) == "string" then
+      e = e:gsub("^-", "")
+    end
+    s, e = tonumber(s), tonumber(e)
+    e = e or s
+    if not s or file == "" then
+      return nil
+    end
+    return {
+      repo = repo or "",
+      base = base or "",
+      file = file,
+      start_line = math.min(s, e),
+      end_line = math.max(s, e),
+      worktree = worktree,
+      body = body or "",
+    }
+  end
+  -- Repo form first, marked before plain, so a `@` inside a bare path
+  -- cannot misparse (the repo attempt fails, the bare one wins).
+  local repo, base, file, s, e, body = line:match(REPO_MARKED)
+  if repo then
+    return finish(repo, base, file, s, e, true, body)
+  end
+  repo, base, file, s, e, body = line:match(REPO_PLAIN)
+  if repo then
+    return finish(repo, base, file, s, e, false, body)
+  end
+  file, s, e, body = line:match(BARE_MARKED)
+  if file then
+    return finish("", "", file, s, e, true, body)
+  end
+  file, s, e, body = line:match(BARE_PLAIN)
+  if file then
+    return finish("", "", file, s, e, false, body)
+  end
+  return nil
+end
+
+--- Parse one list-view block (header + quoted snippet lines) back into a
+--- comment record. Hidden fields (absolute path, git root, exact revisions)
+--- are carried over from `fallback`, so free-text edits to the visible block
+--- never lose the data the agent needs.
+--- @param block string[] block lines, header first
+--- @param fallback table|nil original comment record
+--- @return table|nil comment record, nil when the header does not parse
+function M.parse_block(block, fallback)
+  fallback = fallback or {}
+  local first = nil
+  for _, l in ipairs(block) do
+    if not l:match("^%s*$") then
+      first = l
+      break
+    end
+  end
+  local h = first and M.parse_header(first) or nil
+  if not h then
+    return nil
+  end
+  local snippet, extra = {}, {}
+  local seen_header = false
+  for _, l in ipairs(block) do
+    if not seen_header then
+      if l == first then
+        seen_header = true
+      end
+    elseif l:match("^%s*$") then
+      -- skip blank padding inside the block
+    else
+      local code = l:match("^%s*%d+%s*|%s?(.*)$")
+      if code ~= nil then
+        table.insert(snippet, code)
+      else
+        table.insert(extra, l)
+      end
+    end
+  end
+  local body = h.body
+  if #extra > 0 then
+    body = body .. "\n" .. table.concat(extra, "\n")
+  end
+  return {
+    file = h.file,
+    absolute = fallback.absolute or "",
+    git_root = fallback.git_root or "",
+    side = fallback.side or (h.worktree and "new" or "old"),
+    side_revision = fallback.side_revision,
+    other_revision = fallback.other_revision,
+    start_line = h.start_line,
+    end_line = h.end_line,
+    snippet = snippet,
+    body = body,
+  }
 end
 
 -- Resolve which side the cursor/selection is on.
@@ -279,6 +372,271 @@ function M.export_comments(ctx_or_tab)
   pcall(vim.fn.setreg, '"', text)
   vim.notify(string.format("Copied %d review comment(s) to clipboard", #comments), vim.log.levels.INFO)
   return text
+end
+
+-- ---------------------------------------------------------------------------
+-- Editable list view: one float showing every saved comment.
+-- `dd` on a block deletes that entry immediately; `:w` parses the buffer
+-- text back into memory (so free-text deletions and body edits stick);
+-- `q` closes without saving.
+-- ---------------------------------------------------------------------------
+
+-- ---------------------------------------------------------------------------
+-- Editable list view: one float showing every saved comment, blocks split
+-- on blank lines. `dd` on a block deletes that entry; `:w` matches the
+-- buffer's blocks back to memory by (file, lines) so free-text deletions,
+-- body edits and even reorders stick while hidden fields (absolute path,
+-- exact revisions) survive; `q` closes without saving.
+-- ---------------------------------------------------------------------------
+
+local LIST_GROUP = "codediff-review-list"
+
+--- Split buffer lines into non-blank blocks with 1-based row spans.
+--- @param all string[]
+--- @return table[] { lines, srow, erow }
+function M.split_blocks(all)
+  local blocks, cur = {}, nil
+  for i, l in ipairs(all) do
+    if l:match("^%s*$") then
+      cur = nil
+    else
+      if not cur then
+        cur = { lines = {}, srow = i }
+        table.insert(blocks, cur)
+      end
+      table.insert(cur.lines, l)
+      cur.erow = i
+    end
+  end
+  return blocks
+end
+
+local function set_buf_lines(buf, lines)
+  local ok = pcall(vim.api.nvim_buf_set_lines, buf, 0, -1, false, lines)
+  if not ok then
+    vim.bo[buf].modifiable = true
+    vim.api.nvim_buf_set_lines(buf, 0, -1, false, lines)
+  end
+  vim.bo[buf].modified = false
+end
+
+--- Render the session's comments into an open list buffer.
+--- @param buf number
+--- @param tabpage number
+function M.render_list(buf, tabpage)
+  if not vim.api.nvim_buf_is_valid(buf) then
+    return
+  end
+  local comments = M.get_comments(tabpage)
+  local lines = {}
+  for i, c in ipairs(comments) do
+    if i > 1 then
+      table.insert(lines, "")
+    end
+    for _, l in ipairs(vim.split(M.format_comment(c), "\n", { plain = true })) do
+      table.insert(lines, l)
+    end
+  end
+  if #lines == 0 then
+    lines = { "" }
+  end
+  set_buf_lines(buf, lines)
+end
+
+--- Parse the list buffer back into the session, replacing its comments.
+--- Blocks are matched to existing entries by (file, lines), so hidden
+--- fields (absolute path, exact revisions) survive body edits and reorders;
+--- unmatched blocks inherit leftovers positionally. Blocks whose header no
+--- longer parses are ignored -- this is how free-text deletions stick.
+--- Refuses to wipe a non-empty memory when the buffer holds text but zero
+--- parseable blocks -- that smells like a typo, not an intentional clear.
+--- @param tabpage number
+--- @param buf number
+--- @param opts? table { quiet = true } skips the saved notify (for dd)
+--- @return table|nil { saved, removed, ignored }
+function M.write_back(tabpage, buf, opts)
+  local session = lifecycle.get_session(tabpage)
+  if not session then
+    vim.notify("[codediff] Diff session is gone; nothing saved", vim.log.levels.WARN)
+    return nil
+  end
+  local originals = session.review_comments or {}
+  local all = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
+  local blocks = M.split_blocks(all)
+  local used = {}
+  local fresh, pending, ignored = {}, {}, 0
+  for _, b in ipairs(blocks) do
+    local h = M.parse_header(b.lines[1])
+    if not h then
+      ignored = ignored + 1
+    else
+      local match = nil
+      for i, o in ipairs(originals) do
+        if not used[i] and o.file == h.file and o.start_line == h.start_line and o.end_line == h.end_line then
+          match = o
+          used[i] = true
+          break
+        end
+      end
+      if match then
+        table.insert(fresh, M.parse_block(b.lines, match))
+      else
+        table.insert(pending, b)
+      end
+    end
+  end
+  for _, b in ipairs(pending) do
+    local fallback = {}
+    for i, o in ipairs(originals) do
+      if not used[i] then
+        fallback = o
+        used[i] = true
+        break
+      end
+    end
+    table.insert(fresh, M.parse_block(b.lines, fallback))
+  end
+  if #fresh == 0 and #originals > 0 then
+    local has_text = false
+    for _, l in ipairs(all) do
+      if not l:match("^%s*$") then
+        has_text = true
+        break
+      end
+    end
+    if has_text then
+      vim.notify("[codediff] No parseable comment blocks; nothing saved", vim.log.levels.WARN)
+      return nil
+    end
+  end
+  for i, c in ipairs(fresh) do
+    c.id = i
+  end
+  session.review_comments = fresh
+  local removed = #originals - #fresh
+  if removed < 0 then
+    removed = 0
+  end
+  M.render_list(buf, tabpage)
+  if not (opts and opts.quiet) then
+    if removed > 0 or ignored > 0 then
+      vim.notify(
+        string.format("Saved %d review comment(s), %d removed%s", #fresh, removed, ignored > 0 and (", " .. ignored .. " ignored") or ""),
+        vim.log.levels.INFO
+      )
+    else
+      vim.notify(string.format("Saved %d review comment(s)", #fresh), vim.log.levels.INFO)
+    end
+  end
+  return { saved = #fresh, removed = removed, ignored = ignored }
+end
+
+--- Delete the entry whose block holds the cursor.
+--- @param buf number
+--- @param tabpage number
+function M.delete_at_cursor(buf, tabpage)
+  local session = lifecycle.get_session(tabpage)
+  if not session or not session.review_comments or #session.review_comments == 0 then
+    vim.notify("[codediff] No comment under cursor", vim.log.levels.INFO)
+    return
+  end
+  -- Sync first so buffer order == memory order (covers unsaved reorders).
+  if not M.write_back(tabpage, buf, { quiet = true }) then
+    return
+  end
+  session = lifecycle.get_session(tabpage)
+  if not session then
+    return
+  end
+  local row = vim.api.nvim_win_get_cursor(0)[1]
+  local all = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
+  local idx = nil
+  for i, b in ipairs(M.split_blocks(all)) do
+    if row >= b.srow and row <= b.erow then
+      idx = i
+      break
+    end
+  end
+  if not idx or not session.review_comments[idx] then
+    vim.notify("[codediff] No comment under cursor", vim.log.levels.INFO)
+    return
+  end
+  local removed = table.remove(session.review_comments, idx)
+  for i, c in ipairs(session.review_comments) do
+    c.id = i
+  end
+  M.render_list(buf, tabpage)
+  vim.notify(string.format("Removed comment (%s)", M.location(removed)), vim.log.levels.INFO)
+end
+
+--- Open the editable list float for a session.
+--- @param tabpage number
+function M.open_list(tabpage)
+  local session = lifecycle.get_session(tabpage)
+  if not session then
+    vim.notify("[codediff] No active diff session", vim.log.levels.WARN)
+    return
+  end
+  local buf = vim.api.nvim_create_buf(false, true)
+  vim.bo[buf].buftype = "nofile"
+  vim.bo[buf].bufhidden = "wipe"
+  vim.bo[buf].swapfile = false
+  vim.bo[buf].filetype = "codediff-review"
+  vim.bo[buf].modifiable = true
+  M.render_list(buf, tabpage)
+
+  local all = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
+  local width = 0
+  for _, l in ipairs(all) do
+    width = math.max(width, vim.fn.strdisplaywidth(l))
+  end
+  width = math.min(math.max(width + 4, 60), vim.o.columns - 4)
+  local height = math.min(math.max(#all + 2, 8), vim.o.lines - 6)
+  local win = vim.api.nvim_open_win(buf, true, {
+    relative = "editor",
+    row = math.floor((vim.o.lines - height) / 2),
+    col = math.floor((vim.o.columns - width) / 2),
+    width = width,
+    height = height,
+    style = "minimal",
+    border = "rounded",
+    title = " Review comments ",
+    title_pos = "center",
+  })
+  vim.wo[win].wrap = false
+
+  local function close()
+    if vim.api.nvim_win_is_valid(win) then
+      vim.api.nvim_win_close(win, true)
+    end
+  end
+  vim.keymap.set("n", "q", close, { buffer = buf, nowait = true, desc = "Close review list" })
+  vim.keymap.set("n", "<Esc>", close, { buffer = buf, nowait = true, desc = "Close review list" })
+  vim.keymap.set("n", "dd", function()
+    M.delete_at_cursor(buf, tabpage)
+  end, { buffer = buf, nowait = true, desc = "Delete review comment under cursor" })
+
+  vim.api.nvim_create_autocmd("BufWriteCmd", {
+    group = vim.api.nvim_create_augroup(LIST_GROUP, { clear = false }),
+    buffer = buf,
+    callback = function()
+      M.write_back(tabpage, buf)
+    end,
+    desc = "Save review-list edits back to memory",
+  })
+
+  vim.notify("dd deletes entry under cursor, :w saves text edits, q closes", vim.log.levels.INFO)
+end
+
+--- Open the list for whichever session owns the current buffer (or tab).
+function M.open_list_current()
+  local cur = vim.api.nvim_get_current_buf()
+  local tabpage = lifecycle.find_tabpage_by_buffer(cur) or vim.api.nvim_get_current_tabpage()
+  if not lifecycle.get_session(tabpage) then
+    vim.notify("[codediff] No active diff session here", vim.log.levels.WARN)
+    return
+  end
+  M.open_list(tabpage)
 end
 
 return M

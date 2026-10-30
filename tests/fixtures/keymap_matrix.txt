@@ -4,6 +4,10 @@
 
 ## standalone side-by-side
 original n  [c             Previous hunk
+original n  \cc            Add review comment
+original n  \cd            Clear review comments
+original n  \ce            Copy review comments to clipboard
+original n  \cl            List/edit review comments
 original n  \hr            Discard hunk under cursor
 original n  \hs            Stage hunk under cursor
 original n  \hu            Unstage hunk under cursor
@@ -15,10 +19,16 @@ original n  gc             Toggle compact mode
 original n  gf             Open buffer in previous tab
 original n  q              Close codediff tab
 original n  t              Toggle diff layout
+original x  \cc            Add review comment for selection
 original x  ih             Hunk textobject
 original o  ih             Hunk textobject
+original v  \cc            Add review comment for selection
 original v  ih             Hunk textobject
 modified n  [c             Previous hunk
+modified n  \cc            Add review comment
+modified n  \cd            Clear review comments
+modified n  \ce            Copy review comments to clipboard
+modified n  \cl            List/edit review comments
 modified n  \hr            Discard hunk under cursor
 modified n  \hs            Stage hunk under cursor
 modified n  \hu            Unstage hunk under cursor
@@ -30,12 +40,18 @@ modified n  gc             Toggle compact mode
 modified n  gf             Open buffer in previous tab
 modified n  q              Close codediff tab
 modified n  t              Toggle diff layout
+modified x  \cc            Add review comment for selection
 modified x  ih             Hunk textobject
 modified o  ih             Hunk textobject
+modified v  \cc            Add review comment for selection
 modified v  ih             Hunk textobject
 
 ## standalone inline
 original n  [c             Previous hunk
+original n  \cc            Add review comment
+original n  \cd            Clear review comments
+original n  \ce            Copy review comments to clipboard
+original n  \cl            List/edit review comments
 original n  \hr            Discard hunk under cursor
 original n  \hs            Stage hunk under cursor
 original n  \hu            Unstage hunk under cursor
@@ -47,10 +63,16 @@ original n  gc             Toggle compact mode
 original n  gf             Open buffer in previous tab
 original n  q              Close codediff tab
 original n  t              Toggle diff layout
+original x  \cc            Add review comment for selection
 original x  ih             Hunk textobject
 original o  ih             Hunk textobject
+original v  \cc            Add review comment for selection
 original v  ih             Hunk textobject
 modified n  [c             Previous hunk
+modified n  \cc            Add review comment
+modified n  \cd            Clear review comments
+modified n  \ce            Copy review comments to clipboard
+modified n  \cl            List/edit review comments
 modified n  \hr            Discard hunk under cursor
 modified n  \hs            Stage hunk under cursor
 modified n  \hu            Unstage hunk under cursor
@@ -62,8 +84,10 @@ modified n  gc             Toggle compact mode
 modified n  gf             Open buffer in previous tab
 modified n  q              Close codediff tab
 modified n  t              Toggle diff layout
+modified x  \cc            Add review comment for selection
 modified x  ih             Hunk textobject
 modified o  ih             Hunk textobject
+modified v  \cc            Add review comment for selection
 modified v  ih             Hunk textobject
 
 ## explorer side-by-side
@@ -71,6 +95,10 @@ original n  -              Toggle stage/unstage
 original n  [c             Previous hunk
 original n  [f             Previous file
 original n  \b             Toggle explorer visibility
+original n  \cc            Add review comment
+original n  \cd            Clear review comments
+original n  \ce            Copy review comments to clipboard
+original n  \cl            List/edit review comments
 original n  \e             Focus explorer panel
 original n  \hr            Discard hunk under cursor
 original n  \hs            Stage hunk under cursor
@@ -85,13 +113,19 @@ original n  gc             Toggle compact mode
 original n  gf             Open buffer in previous tab
 original n  q              Close codediff tab
 original n  t              Toggle diff layout
+original x  \cc            Add review comment for selection
 original x  ih             Hunk textobject
 original o  ih             Hunk textobject
+original v  \cc            Add review comment for selection
 original v  ih             Hunk textobject
 modified n  -              Toggle stage/unstage
 modified n  [c             Previous hunk
 modified n  [f             Previous file
 modified n  \b             Toggle explorer visibility
+modified n  \cc            Add review comment
+modified n  \cd            Clear review comments
+modified n  \ce            Copy review comments to clipboard
+modified n  \cl            List/edit review comments
 modified n  \e             Focus explorer panel
 modified n  \hr            Discard hunk under cursor
 modified n  \hs            Stage hunk under cursor
@@ -106,8 +140,10 @@ modified n  gc             Toggle compact mode
 modified n  gf             Open buffer in previous tab
 modified n  q              Close codediff tab
 modified n  t              Toggle diff layout
+modified x  \cc            Add review comment for selection
 modified x  ih             Hunk textobject
 modified o  ih             Hunk textobject
+modified v  \cc            Add review comment for selection
 modified v  ih             Hunk textobject
 panel    n  -              Toggle stage/unstage
 panel    n  <2-LeftMouse>  Select file
@@ -120,6 +156,9 @@ panel    n  X              Restore/discard changes
 panel    n  [c             Previous hunk
 panel    n  [f             Previous file
 panel    n  \b             Toggle explorer visibility
+panel    n  \cd            Clear review comments
+panel    n  \ce            Copy review comments to clipboard
+panel    n  \cl            List/edit review comments
 panel    n  \e             Focus explorer panel
 panel    n  ]c             Next hunk
 panel    n  ]f             Next file
@@ -148,6 +187,10 @@ original n  -              Toggle stage/unstage
 original n  [c             Previous hunk
 original n  [f             Previous file
 original n  \b             Toggle explorer visibility
+original n  \cc            Add review comment
+original n  \cd            Clear review comments
+original n  \ce            Copy review comments to clipboard
+original n  \cl            List/edit review comments
 original n  \e             Focus explorer panel
 original n  \hr            Discard hunk under cursor
 original n  \hs            Stage hunk under cursor
@@ -162,13 +205,19 @@ original n  gc             Toggle compact mode
 original n  gf             Open buffer in previous tab
 original n  q              Close codediff tab
 original n  t              Toggle diff layout
+original x  \cc            Add review comment for selection
 original x  ih             Hunk textobject
 original o  ih             Hunk textobject
+original v  \cc            Add review comment for selection
 original v  ih             Hunk textobject
 modified n  -              Toggle stage/unstage
 modified n  [c             Previous hunk
 modified n  [f             Previous file
 modified n  \b             Toggle explorer visibility
+modified n  \cc            Add review comment
+modified n  \cd            Clear review comments
+modified n  \ce            Copy review comments to clipboard
+modified n  \cl            List/edit review comments
 modified n  \e             Focus explorer panel
 modified n  \hr            Discard hunk under cursor
 modified n  \hs            Stage hunk under cursor
@@ -183,8 +232,10 @@ modified n  gc             Toggle compact mode
 modified n  gf             Open buffer in previous tab
 modified n  q              Close codediff tab
 modified n  t              Toggle diff layout
+modified x  \cc            Add review comment for selection
 modified x  ih             Hunk textobject
 modified o  ih             Hunk textobject
+modified v  \cc            Add review comment for selection
 modified v  ih             Hunk textobject
 panel    n  -              Toggle stage/unstage
 panel    n  <2-LeftMouse>  Select file
@@ -197,6 +248,9 @@ panel    n  X              Restore/discard changes
 panel    n  [c             Previous hunk
 panel    n  [f             Previous file
 panel    n  \b             Toggle explorer visibility
+panel    n  \cd            Clear review comments
+panel    n  \ce            Copy review comments to clipboard
+panel    n  \cl            List/edit review comments
 panel    n  \e             Focus explorer panel
 panel    n  ]c             Next hunk
 panel    n  ]f             Next file
@@ -228,6 +282,10 @@ original n  \cO            Accept ALL current changes
 original n  \cT            Accept ALL incoming changes
 original n  \cX            Discard ALL, reset to base
 original n  \cb            Accept both changes
+original n  \cc            Add review comment
+original n  \cd            Clear review comments
+original n  \ce            Copy review comments to clipboard
+original n  \cl            List/edit review comments
 original n  \co            Accept current change
 original n  \ct            Accept incoming change
 original n  \cx            Discard changes (keep base)
@@ -241,8 +299,10 @@ original n  gc             Toggle compact mode
 original n  gf             Open buffer in previous tab
 original n  q              Close codediff tab
 original n  t              Toggle diff layout
+original x  \cc            Add review comment for selection
 original x  ih             Hunk textobject
 original o  ih             Hunk textobject
+original v  \cc            Add review comment for selection
 original v  ih             Hunk textobject
 modified n  [c             Previous hunk
 modified n  [x             Previous conflict
@@ -251,6 +311,10 @@ modified n  \cO            Accept ALL current changes
 modified n  \cT            Accept ALL incoming changes
 modified n  \cX            Discard ALL, reset to base
 modified n  \cb            Accept both changes
+modified n  \cc            Add review comment
+modified n  \cd            Clear review comments
+modified n  \ce            Copy review comments to clipboard
+modified n  \cl            List/edit review comments
 modified n  \co            Accept current change
 modified n  \ct            Accept incoming change
 modified n  \cx            Discard changes (keep base)
@@ -264,8 +328,10 @@ modified n  gc             Toggle compact mode
 modified n  gf             Open buffer in previous tab
 modified n  q              Close codediff tab
 modified n  t              Toggle diff layout
+modified x  \cc            Add review comment for selection
 modified x  ih             Hunk textobject
 modified o  ih             Hunk textobject
+modified v  \cc            Add review comment for selection
 modified v  ih             Hunk textobject
 result   n  2do            Get hunk from incoming (2do)
 result   n  3do            Get hunk from current (3do)
@@ -276,6 +342,9 @@ result   n  \cO            Accept ALL current changes
 result   n  \cT            Accept ALL incoming changes
 result   n  \cX            Discard ALL, reset to base
 result   n  \cb            Accept both changes
+result   n  \cd            Clear review comments
+result   n  \ce            Copy review comments to clipboard
+result   n  \cl            List/edit review comments
 result   n  \co            Accept current change
 result   n  \ct            Accept incoming change
 result   n  \cx            Discard changes (keep base)
@@ -289,6 +358,10 @@ result   n  t              Toggle diff layout
 
 ## compact side-by-side
 original n  [c             Previous hunk
+original n  \cc            Add review comment
+original n  \cd            Clear review comments
+original n  \ce            Copy review comments to clipboard
+original n  \cl            List/edit review comments
 original n  \hr            Discard hunk under cursor
 original n  \hs            Stage hunk under cursor
 original n  \hu            Unstage hunk under cursor
@@ -311,10 +384,16 @@ original n  zc             codediff: synced fold zc
 original n  zo             codediff: synced fold zo
 original n  zv             codediff: synced fold zv
 original n  zx             codediff: synced fold zx
+original x  \cc            Add review comment for selection
 original x  ih             Hunk textobject
 original o  ih             Hunk textobject
+original v  \cc            Add review comment for selection
 original v  ih             Hunk textobject
 modified n  [c             Previous hunk
+modified n  \cc            Add review comment
+modified n  \cd            Clear review comments
+modified n  \ce            Copy review comments to clipboard
+modified n  \cl            List/edit review comments
 modified n  \hr            Discard hunk under cursor
 modified n  \hs            Stage hunk under cursor
 modified n  \hu            Unstage hunk under cursor
@@ -337,6 +416,8 @@ modified n  zc             codediff: synced fold zc
 modified n  zo             codediff: synced fold zo
 modified n  zv             codediff: synced fold zv
 modified n  zx             codediff: synced fold zx
+modified x  \cc            Add review comment for selection
 modified x  ih             Hunk textobject
 modified o  ih             Hunk textobject
+modified v  \cc            Add review comment for selection
 modified v  ih             Hunk textobject
